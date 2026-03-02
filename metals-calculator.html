@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>귀금속 선물 계산기</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --surface: #111114;
+    --surface2: #18181d;
+    --border: #2a2a35;
+    --gold: #d4a842;
+    --gold-dim: #8a6f35;
+    --silver: #b8c8d8;
+    --silver-dim: #5a6a78;
+    --accent: #e8d5a3;
+    --text: #edf2f7;
+    --text-dim: #8a96a8;
+    --green: #4ade80;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.8rem;
+    letter-spacing: 6px;
+    background: linear-gradient(135deg, var(--gold), var(--silver), var(--gold));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 4px;
+  }
+  .header p {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media(max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #b0bac8;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+  }
+  .gold-card .card-title::before { background: var(--gold); }
+  .silver-card .card-title::before { background: var(--silver); }
+  .ratio-card .card-title::before { background: #a78bfa; }
+  .exchange-card .card-title::before { background: var(--green); }
+
+  .input-group { display: flex; flex-direction: column; gap: 6px; }
+  .input-group label {
+    font-size: 0.72rem;
+    color: #b0bac8;
+    letter-spacing: 1px;
+  }
+  .input-row {
+    display: flex;
+    align-items: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .input-row:focus-within { border-color: var(--gold); }
+  .input-row input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 1.1rem;
+    padding: 10px 14px;
+    outline: none;
+    width: 0;
+  }
+  .input-row .unit {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: #8a96a8;
+    padding: 0 14px;
+    white-space: nowrap;
+    border-left: 1px solid var(--border);
+  }
+
+  .ratio-display {
+    text-align: center;
+    padding: 8px 0;
+  }
+  .ratio-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.2rem;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--gold), #a78bfa);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+  }
+  .ratio-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-top: 4px;
+  }
+
+  /* Price Table */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .table-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .table-header h2 {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .table-scroll { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+  }
+  thead th {
+    background: var(--surface2);
+    padding: 10px 14px;
+    text-align: right;
+    font-size: 0.68rem;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  thead th:first-child { text-align: center; }
+  tbody tr { border-bottom: 1px solid rgba(42,42,53,0.5); transition: background 0.15s; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody tr.highlight-row { background: rgba(201,168,76,0.06); }
+  tbody tr.highlight-row td:first-child { color: var(--gold); }
+  tbody td {
+    padding: 9px 14px;
+    text-align: right;
+    color: #edf2f7;
+  }
+  tbody td:first-child { text-align: center; color: #8a96a8; font-size: 0.75rem; }
+  .gold-val { color: var(--gold); }
+  .silver-val { color: var(--silver); }
+  .highlight-silver { background: rgba(155,168,181,0.08) !important; }
+
+  /* Silver bar section */
+  .silverbar-card {
+    background: linear-gradient(135deg, rgba(155,168,181,0.06), rgba(74,85,96,0.04));
+    border: 1px solid var(--silver-dim);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .silverbar-card .card-title::before { background: var(--silver); }
+
+  .premium-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding: 14px 18px;
+    background: var(--bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .premium-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+  .premium-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 3px;
+  }
+  .premium-positive { color: var(--red); }
+  .premium-negative { color: var(--green); }
+  .premium-zero { color: var(--silver); }
+
+  /* Google Sheets */
+  .sheets-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .sheets-card .card-title::before { background: #34d399; }
+
+  .script-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: #6ee7b7;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    line-height: 1.6;
+    max-height: 180px;
+    overflow-y: auto;
+    margin: 12px 0;
+  }
+  details summary {
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    padding: 6px 0;
+    user-select: none;
+  }
+  details summary:hover { color: var(--text); }
+
+  .save-btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+    border: none;
+    border-radius: 10px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 5px;
+    color: #0a0a0b;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-top: 8px;
+  }
+  .save-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .save-btn:active { transform: translateY(0); }
+  .save-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text);
+    letter-spacing: 1px;
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+
+  .wbtn {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: #b0bac8;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .wbtn:hover { border-color: var(--silver); color: #fff; }
+  .wbtn.active { border-color: var(--silver); color: #fff; background: rgba(155,168,181,0.12); }
+
+  .dim { color: var(--text-dim); }
+  .mt8 { margin-top: 8px; }
+
+  .silverbar-input-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+  .silverbar-input-row .input-group { flex: 1; min-width: 140px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Precious Metals</h1>
+    <p>선물 가격 · 환율 · 프리미엄 계산기</p>
+  </div>
+
+  <!-- 한 돈 시세 계산기 -->
+  <div class="card" style="margin-bottom:16px;background:var(--surface);border-color:#4a5568">
+    <div class="card-title">
+      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#f6ad55;margin-right:8px"></span>
+      한 돈 ↔ 1kg 환산
+      <span style="margin-left:auto;font-family:'DM Mono',monospace;font-size:0.6rem;color:#6b7280">1돈 = 3.75g</span>
+    </div>
+
+    <!-- 돈 → kg -->
+    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8a96a8;letter-spacing:2px;margin-bottom:8px">돈 → kg</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="input-group">
+        <label>금 한 돈 가격</label>
+        <div class="input-row">
+          <input type="number" id="goldDon" placeholder="450000" step="100" oninput="calcDon()">
+          <span class="unit">원/돈</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>은 한 돈 가격</label>
+        <div class="input-row">
+          <input type="number" id="silverDon" placeholder="6000" step="100" oninput="calcDon()">
+          <span class="unit">원/돈</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- kg → 돈 -->
+    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8a96a8;letter-spacing:2px;margin-bottom:8px">kg → 돈</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="input-group">
+        <label>금 kg당 가격</label>
+        <div class="input-row">
+          <input type="number" id="goldKgInput" placeholder="12000" step="10" oninput="calcDon()">
+          <span class="unit">만원/kg</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>은 kg당 가격</label>
+        <div class="input-row">
+          <input type="number" id="silverKgInput" placeholder="150" step="1" oninput="calcDon()">
+          <span class="unit">만원/kg</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="donResult" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0">
+        <div style="padding:14px 12px;text-align:center;border-right:1px solid var(--border)">
+          <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#8a96a8;letter-spacing:1.5px;margin-bottom:4px">금 1kg</div>
+          <div id="don_gold1k" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:2px;color:#d4a842">—</div>
+          <div id="don_gold_rev" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#8a96a8;margin-top:4px">—</div>
+        </div>
+        <div style="padding:14px 12px;text-align:center;border-right:1px solid var(--border)">
+          <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#8a96a8;letter-spacing:1.5px;margin-bottom:4px">은 1kg</div>
+          <div id="don_silver1k" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:2px;color:#b8c8d8">—</div>
+          <div id="don_silver_rev" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#8a96a8;margin-top:4px">—</div>
+        </div>
+        <div style="padding:14px 12px;text-align:center">
+          <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#8a96a8;letter-spacing:1.5px;margin-bottom:4px">금은 비율</div>
+          <div id="don_ratio" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:2px;background:linear-gradient(135deg,#d4a842,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent">—</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#6b7280;margin-top:4px">Gold ÷ Silver</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input Row -->
+  <div class="grid-2">
+    <!-- Gold -->
+    <div class="card gold-card">
+      <div class="card-title">금 선물 가격</div>
+      <div class="input-group">
+        <div class="input-row">
+          <input type="number" id="goldPrice" placeholder="2350" step="0.1">
+          <span class="unit">USD / troy oz</span>
+        </div>
+      </div>
+    </div>
+    <!-- Silver -->
+    <div class="card silver-card">
+      <div class="card-title">은 선물 가격</div>
+      <div class="input-group">
+        <div class="input-row">
+          <input type="number" id="silverPrice" placeholder="28.5" step="0.01">
+          <span class="unit">USD / troy oz</span>
+        </div>
+      </div>
+    </div>
+    <!-- Exchange Rate -->
+    <div class="card exchange-card">
+      <div class="card-title">환율</div>
+      <div class="input-group">
+        <div class="input-row">
+          <input type="number" id="exchangeRate" placeholder="1380" step="1">
+          <span class="unit">KRW / USD</span>
+        </div>
+      </div>
+    </div>
+    <!-- Ratio -->
+    <div class="card ratio-card">
+      <div class="card-title">금 / 은 비율 (Gold-Silver Ratio)</div>
+      <div class="ratio-display">
+        <div class="ratio-num" id="ratioDisplay">—</div>
+        <div class="ratio-label">GOLD ÷ SILVER</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Premium Price Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <h2>💰 프리미엄별 가격표 (VAT 포함, 만원/g)</h2>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>프리미엄</th>
+            <th class="gold-val">금 100g (만원)</th>
+            <th class="silver-val">은 1kg (만원)</th>
+            <th class="gold-val">금 1kg (만원)</th>
+          </tr>
+        </thead>
+        <tbody id="priceTableBody">
+          <tr><td colspan="4" style="text-align:center;color:var(--text-dim);padding:24px;font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:2px;">— 가격을 입력하세요 —</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Silver Bar Section -->
+  <div class="silverbar-card">
+    <div class="card-title">실버바 프리미엄 계산</div>
+    <div class="silverbar-input-row">
+      <div class="input-group">
+        <label>실버바 가격</label>
+        <div class="input-row">
+          <input type="number" id="silverbarPrice" placeholder="550" step="1">
+          <span class="unit">만원 / kg</span>
+        </div>
+      </div>
+    </div>
+    <div class="premium-display" id="premiumDisplay" style="display:none">
+      <div>
+        <div class="premium-label">실제 프리미엄</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text-dim);margin-top:4px" id="premiumBase">기준가: —</div>
+      </div>
+      <div class="premium-value" id="premiumValue">—</div>
+    </div>
+  </div>
+
+  <!-- Custom Premium Calculator -->
+  <div class="card" style="margin-bottom:16px;background:var(--surface)">
+    <div class="card-title" style="color:var(--text-dim)">
+      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#f59e0b;margin-right:8px"></span>
+      프리미엄 적정가 계산기
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="input-group">
+        <label>적용할 프리미엄 %</label>
+        <div class="input-row">
+          <input type="number" id="customPremium" placeholder="15" step="0.1" min="0" max="200">
+          <span class="unit">%</span>
+        </div>
+      </div>
+    </div>
+    <div id="customPremiumResult" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px">
+      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:2px;color:var(--text-dim);margin-bottom:12px">VAT 포함 적정가</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div style="text-align:center;padding:10px 6px;background:rgba(201,168,76,0.07);border-radius:8px;border:1px solid rgba(201,168,76,0.15)">
+          <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--gold-dim);letter-spacing:1px;margin-bottom:6px">금 100g</div>
+          <div class="gold-val" id="cp_gold100" style="font-family:'DM Mono',monospace;font-size:1rem;font-weight:500">—</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-dim);margin-top:2px">만원</div>
+        </div>
+        <div style="text-align:center;padding:10px 6px;background:rgba(155,168,181,0.07);border-radius:8px;border:1px solid rgba(155,168,181,0.15)">
+          <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--silver-dim);letter-spacing:1px;margin-bottom:6px">은 1kg</div>
+          <div class="silver-val" id="cp_silver1k" style="font-family:'DM Mono',monospace;font-size:1rem;font-weight:500">—</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-dim);margin-top:2px">만원</div>
+        </div>
+        <div style="text-align:center;padding:10px 6px;background:rgba(201,168,76,0.07);border-radius:8px;border:1px solid rgba(201,168,76,0.15)">
+          <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--gold-dim);letter-spacing:1px;margin-bottom:6px">금 1kg</div>
+          <div class="gold-val" id="cp_gold1k" style="font-family:'DM Mono',monospace;font-size:1rem;font-weight:500">—</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-dim);margin-top:2px">만원</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shop Links -->
+  <div class="card" style="margin-bottom:16px;background:var(--surface)">
+    <div class="card-title" style="color:var(--text-dim)">
+      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#60a5fa;margin-right:8px"></span>
+      귀금속 쇼핑몰 바로가기
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <a href="https://www.dsmint.com/sp2/goods_data_list.htm?cate_code=021001" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-decoration:none;transition:border-color 0.2s" onmouseover="this.style.borderColor='#60a5fa'" onmouseout="this.style.borderColor='var(--border)'">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text);letter-spacing:1px">대성금속</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text-dim);margin-top:2px">dsmint.com</div>
+        </div>
+        <span style="color:#60a5fa;font-size:1rem">→</span>
+      </a>
+      <a href="https://www.goldgold.co.kr/product/list.html?cate_no=257" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-decoration:none;transition:border-color 0.2s" onmouseover="this.style.borderColor='#60a5fa'" onmouseout="this.style.borderColor='var(--border)'">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text);letter-spacing:1px">한국표준금거래소</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text-dim);margin-top:2px">goldgold.co.kr</div>
+        </div>
+        <span style="color:#60a5fa;font-size:1rem">→</span>
+      </a>
+      <a href="https://www.goodgold.co.kr/shop/list-1020" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-decoration:none;transition:border-color 0.2s" onmouseover="this.style.borderColor='#60a5fa'" onmouseout="this.style.borderColor='var(--border)'">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text);letter-spacing:1px">국제표준금거래소</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text-dim);margin-top:2px">goodgold.co.kr</div>
+        </div>
+        <span style="color:#60a5fa;font-size:1rem">→</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- 실버바 신청 금액 산정 -->
+  <div class="card" style="margin-bottom:16px;background:var(--surface);border-color:var(--silver-dim)">
+    <div class="card-title">
+      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--silver);margin-right:8px"></span>
+      실버바 신청 금액 산정
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <!-- 그래뉼 가격 -->
+      <div class="input-group" style="grid-column:1/-1">
+        <label>그래뉼 가격</label>
+        <div class="input-row">
+          <input type="number" id="granulePrice" placeholder="450" step="1" oninput="calcOrder()">
+          <span class="unit">만원 / kg</span>
+        </div>
+      </div>
+      <!-- 추가 금액 -->
+      <div class="input-group" style="grid-column:1/-1">
+        <label>추가 금액 (g당)</label>
+        <div class="input-row">
+          <input type="number" id="extraAmt" placeholder="0" step="1" oninput="calcOrder()">
+          <span class="unit">원 / g</span>
+        </div>
+      </div>
+      <!-- 마진 -->
+      <div class="input-group">
+        <label>마진 (kg당)</label>
+        <div class="input-row">
+          <input type="number" id="marginAmt" placeholder="0" step="1" oninput="calcOrder()">
+          <span class="unit">만원 / kg</span>
+        </div>
+      </div>
+      <!-- 공임비 -->
+      <div class="input-group">
+        <label>공임비 (kg당)</label>
+        <div class="input-row">
+          <input type="number" id="laborPerG" placeholder="500" step="10" oninput="calcOrder()">
+          <span class="unit">만원 / kg</span>
+        </div>
+      </div>
+      </div>
+      <!-- 신청 중량 -->
+      <div class="input-group" style="grid-column:1/-1">
+        <label>신청 중량</label>
+        <div class="input-row">
+          <input type="number" id="orderWeight" placeholder="1" step="1" min="1" oninput="calcOrder()">
+          <span class="unit">kg</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <button onclick="setWeight(1)" id="wbtn_1" class="wbtn">1kg</button>
+          <button onclick="setWeight(2)" id="wbtn_2" class="wbtn">2kg</button>
+          <button onclick="setWeight(3)" id="wbtn_3" class="wbtn">3kg</button>
+          <button onclick="setWeight(5)" id="wbtn_5" class="wbtn">5kg</button>
+          <button onclick="setWeight(10)" id="wbtn_10" class="wbtn">10kg</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 결과 -->
+    <div id="orderResult" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:2px;color:var(--text-dim);margin-bottom:10px">계산 내역</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#a0aec0">그래뉼 원가</span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.78rem;color:#e2e8f0" id="ord_granule">—</span>
+          </div>
+          <div id="ord_labor_row" style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#a0aec0">공임비</span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.78rem;color:#e2e8f0" id="ord_labor">—</span>
+          </div>
+          <div id="ord_margin_row" style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#a0aec0">마진</span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.78rem;color:#4ade80" id="ord_margin">—</span>
+          </div>
+          <div id="ord_extra_row" style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#a0aec0">추가 금액</span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.78rem;color:#fbbf24" id="ord_extra">—</span>
+          </div>
+          <div style="height:1px;background:var(--border);margin:2px 0"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#a0aec0">합계</span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.78rem;color:#e2e8f0" id="ord_subtotal">—</span>
+          </div>
+        </div>
+      </div>
+      <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;background:rgba(155,168,181,0.05)">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:2px;color:#a0aec0">최종 신청 금액</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#a0aec0;margin-top:3px" id="ord_weight_label"></div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:3px;color:#c6d9e8" id="ord_total">—</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#a0aec0">만원</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheets-card">
+    <div class="card-title">Google Sheets 저장</div>
+    <div class="input-group mt8">
+      <label>Apps Script 웹앱 URL</label>
+      <div class="input-row" style="flex-direction:row">
+        <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/..." style="font-size:0.78rem">
+      </div>
+    </div>
+    <details style="margin-top:14px">
+      <summary>📋 Google Apps Script 설정 방법 (클릭해서 펼치기)</summary>
+      <div style="margin-top:10px;font-size:0.75rem;color:var(--text-dim);line-height:1.7;padding:0 4px">
+        1. <a href="https://script.google.com" target="_blank" style="color:var(--gold)">script.google.com</a>에서 새 프로젝트 생성<br>
+        2. 아래 코드를 붙여넣기<br>
+        3. 배포 → 새 배포 → 유형: 웹 앱 → 액세스: 나만 → 배포<br>
+        4. 생성된 URL을 위 입력창에 붙여넣기
+      </div>
+      <div class="script-box" id="scriptCode"></div>
+    </details>
+    <button class="save-btn" id="saveBtn" onclick="saveToSheets()">SAVE TO GOOGLE SHEETS</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TROY_OZ  = 31.1035; // g per troy oz
+const DON_TO_G = 3.75;    // g per 돈
+const KG_TO_G  = 1000;
+
+/* ─── 한 돈 / kg 환산 ─────────────────────────── */
+function calcDon() {
+  const goldDon    = parseFloat(document.getElementById('goldDon').value)    || 0; // 원/돈
+  const silverDon  = parseFloat(document.getElementById('silverDon').value)  || 0;
+  const goldKgMw   = parseFloat(document.getElementById('goldKgInput').value)   || 0; // 만원/kg
+  const silverKgMw = parseFloat(document.getElementById('silverKgInput').value) || 0;
+
+  const result = document.getElementById('donResult');
+  if (!goldDon && !silverDon && !goldKgMw && !silverKgMw) { result.style.display='none'; return; }
+
+  // 돈→kg : 1kg = 1000/3.75 돈 × 돈당가격(원) → 만원
+  const goldKg   = goldDon   > 0 ? (goldDon   * KG_TO_G / DON_TO_G) / 10000 : null;
+  const silverKg = silverDon > 0 ? (silverDon * KG_TO_G / DON_TO_G) / 10000 : null;
+
+  // kg→돈 : 돈당(원) = kg당(만원) × 10000 × 3.75/1000
+  const goldDonRev   = goldKgMw   > 0 ? (goldKgMw   * 10000 * DON_TO_G / KG_TO_G) : null;
+  const silverDonRev = silverKgMw > 0 ? (silverKgMw * 10000 * DON_TO_G / KG_TO_G) : null;
+
+  // 최종 kg 값 (돈 입력 우선, 없으면 kg 입력)
+  const gKg = goldKg   ?? (goldKgMw   > 0 ? goldKgMw   : null);
+  const sKg = silverKg ?? (silverKgMw > 0 ? silverKgMw : null);
+
+  document.getElementById('don_gold1k').textContent   = gKg ? gKg.toFixed(1) + ' 만원' : '—';
+  document.getElementById('don_silver1k').textContent = sKg ? sKg.toFixed(1) + ' 만원' : '—';
+
+  // 역방향 결과
+  document.getElementById('don_gold_rev').textContent   = goldDonRev   ? Math.round(goldDonRev).toLocaleString()   + ' 원/돈' : (goldDon   > 0 ? '—' : '');
+  document.getElementById('don_silver_rev').textContent = silverDonRev ? Math.round(silverDonRev).toLocaleString() + ' 원/돈' : (silverDon > 0 ? '—' : '');
+
+  document.getElementById('don_ratio').textContent = (gKg && sKg) ? (gKg / sKg).toFixed(1) : '—';
+  result.style.display = 'block';
+}
+
+/* ─── 선물 가격 계산 (만원/g, VAT 포함) ────────── */
+const PREMIUMS = [0,5,10,15,20,25,30,35,40,45,50];
+
+function getInputs() {
+  return {
+    gold:     parseFloat(document.getElementById('goldPrice').value)     || 0,
+    silver:   parseFloat(document.getElementById('silverPrice').value)   || 0,
+    rate:     parseFloat(document.getElementById('exchangeRate').value)  || 0,
+    silverbar:parseFloat(document.getElementById('silverbarPrice').value)|| 0,
+  };
+}
+
+// 선물가(USD/oz) → 만원/g (VAT 포함, 프리미엄 적용)
+function calcPrice(futuresUSD, rate, premiumPct) {
+  const krwPerG    = futuresUSD * rate / TROY_OZ;           // KRW/g
+  const wPremium   = krwPerG * (1 + premiumPct / 100);
+  const wVAT       = wPremium * 1.1;
+  return wVAT / 10000;                                       // 만원/g
+}
+
+function fmt(val, dec=2) {
+  if (val === null || val === undefined || isNaN(val) || val === 0) return '—';
+  return val.toFixed(dec);
+}
+
+function update() {
+  const { gold, silver, rate } = getInputs();
+  const hasGold   = gold   > 0 && rate > 0;
+  const hasSilver = silver > 0 && rate > 0;
+
+  // ── 금은 비율 (선물 기준)
+  const ratioEl = document.getElementById('ratioDisplay');
+  ratioEl.textContent = (hasGold && hasSilver) ? (gold / silver).toFixed(2) : '—';
+
+  // ── 프리미엄 가격표
+  const tbody = document.getElementById('priceTableBody');
+  if (hasGold || hasSilver) {
+    const rows = PREMIUMS.map(p => {
+      const gP = hasGold   ? calcPrice(gold,   rate, p) : null;
+      const sP = hasSilver ? calcPrice(silver, rate, p) : null;
+      const hl = p === 0 ? 'highlight-row' : '';
+      return `<tr class="${hl}">
+        <td>${p === 0 ? '<span style="color:var(--gold);font-weight:500">0%</span>' : p+'%'}</td>
+        <td class="gold-val">${gP ? (gP*100).toFixed(2) : '—'}</td>
+        <td class="silver-val">${sP ? (sP*1000).toFixed(2) : '—'}</td>
+        <td class="gold-val">${gP ? (gP*1000).toFixed(2) : '—'}</td>
+      </tr>`;
+    });
+    tbody.innerHTML = rows.join('');
+  } else {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-dim);padding:24px;font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:2px;">— 가격을 입력하세요 —</td></tr>`;
+  }
+
+  // ── 실버바 프리미엄
+  const { silverbar } = getInputs();
+  const premDisplay = document.getElementById('premiumDisplay');
+  if (hasSilver && silverbar > 0) {
+    const basePerKg  = calcPrice(silver, rate, 0) * 1000; // 만원/kg
+    const premiumPct = ((silverbar - basePerKg) / basePerKg) * 100;
+    const valEl      = document.getElementById('premiumValue');
+    valEl.textContent = (premiumPct >= 0 ? '+' : '') + premiumPct.toFixed(2) + '%';
+    valEl.className   = 'premium-value ' + (premiumPct > 0 ? 'premium-positive' : premiumPct < 0 ? 'premium-negative' : 'premium-zero');
+    document.getElementById('premiumBase').textContent = `기준가 (VAT 포함, 프리미엄 0%): ${basePerKg.toFixed(2)}만원/kg`;
+    premDisplay.style.display = 'flex';
+  } else {
+    premDisplay.style.display = 'none';
+  }
+
+  // ── 프리미엄 적정가 계산기
+  const customPremium = parseFloat(document.getElementById('customPremium').value);
+  const cpResult = document.getElementById('customPremiumResult');
+  if ((hasGold || hasSilver) && !isNaN(customPremium) && customPremium >= 0) {
+    const gP = hasGold   ? calcPrice(gold,   rate, customPremium) : null;
+    const sP = hasSilver ? calcPrice(silver, rate, customPremium) : null;
+    document.getElementById('cp_gold100').textContent   = gP ? (gP*100).toFixed(2)  : '—';
+    document.getElementById('cp_silver1k').textContent  = sP ? (sP*1000).toFixed(2) : '—';
+    document.getElementById('cp_gold1k').textContent    = gP ? (gP*1000).toFixed(2) : '—';
+    cpResult.style.display = 'block';
+  } else {
+    cpResult.style.display = 'none';
+  }
+}
+
+/* ─── 실버바 신청 금액 산정 ────────────────────── */
+function setWeight(n) {
+  document.getElementById('orderWeight').value = n;
+  document.querySelectorAll('.wbtn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('wbtn_' + n);
+  if (btn) btn.classList.add('active');
+  calcOrder();
+}
+
+function calcOrder() {
+  const granulePerKg = parseFloat(document.getElementById('granulePrice').value) || 0; // 만원/kg
+  const laborPerKg   = parseFloat(document.getElementById('laborPerG').value)    || 0; // 만원/kg
+  const marginPerKg  = parseFloat(document.getElementById('marginAmt').value)    || 0; // 만원/kg
+  const extraPerG    = parseFloat(document.getElementById('extraAmt').value)     || 0; // 원/g
+  const weightKg     = parseFloat(document.getElementById('orderWeight').value)  || 0; // kg
+
+  document.querySelectorAll('.wbtn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById('wbtn_' + weightKg);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  const result = document.getElementById('orderResult');
+  if (!granulePerKg || !weightKg) { result.style.display = 'none'; return; }
+
+  const weightG     = weightKg * KG_TO_G;
+  const granuleCost = granulePerKg * weightKg;                  // 만원
+  const laborCost   = laborPerKg  * weightKg;                   // 만원
+  const marginCost  = marginPerKg * weightKg;                   // 만원
+  const extraCost   = (extraPerG  * weightG) / 10000;           // 원/g → 만원
+  const total       = granuleCost + laborCost + marginCost + extraCost;
+
+  document.getElementById('ord_granule').textContent  = granuleCost > 0  ? granuleCost.toFixed(2) + ' 만원' : '—';
+  document.getElementById('ord_labor').textContent    = laborCost  > 0   ? laborCost.toFixed(2)   + ' 만원' : '—';
+  document.getElementById('ord_margin').textContent   = marginCost > 0   ? '+' + marginCost.toFixed(2) + ' 만원' : '—';
+  document.getElementById('ord_extra').textContent    = extraCost  > 0   ? '+' + extraCost.toFixed(2)  + ' 만원' : '—';
+  document.getElementById('ord_subtotal').textContent = total.toFixed(2) + ' 만원';
+  document.getElementById('ord_total').textContent    = total.toFixed(2);
+  document.getElementById('ord_weight_label').textContent = `중량 ${weightKg}kg (${weightG.toLocaleString()}g)`;
+  result.style.display = 'block';
+}
+
+/* ─── Google Apps Script ───────────────────────── */
+document.getElementById('scriptCode').textContent = `function doPost(e) {
+  const data = JSON.parse(e.postData.contents);
+  const ss = SpreadsheetApp.openById("YOUR_SPREADSHEET_ID");
+  const sheet = ss.getSheetByName("Sheet1") || ss.getSheets()[0];
+  
+  // Header if empty
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      "날짜", "금선물(USD/oz)", "은선물(USD/oz)", "환율(KRW)",
+      "금은비율", "금기준가(만원/g)", "은기준가(만원/kg)",
+      "실버바가격(만원/kg)", "실버바프리미엄(%)"
+    ]);
+  }
+  sheet.appendRow(data.row);
+  
+  return ContentService
+    .createTextOutput(JSON.stringify({result:"ok"}))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+
+async function saveToSheets() {
+  const scriptUrl = document.getElementById('scriptUrl').value.trim();
+  if (!scriptUrl) {
+    showToast('Apps Script URL을 입력하세요', 'error');
+    return;
+  }
+
+  const { gold, silver, rate, silverbar } = getInputs();
+  if (!gold || !silver || !rate) {
+    showToast('선물 가격과 환율을 먼저 입력하세요', 'error');
+    return;
+  }
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ko-KR') + ' ' + now.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
+  const ratio = silver > 0 ? (gold / silver).toFixed(2) : '';
+  const goldBase = calcPrice(gold, rate, 0);
+  const silverBasePerG = calcPrice(silver, rate, 0);
+  const silverBasePerKg = silverBasePerG * 1000;
+  const premiumPct = (silver > 0 && rate > 0 && silverbar > 0)
+    ? (((silverbar - silverBasePerKg) / silverBasePerKg) * 100).toFixed(2)
+    : '';
+
+  const row = [
+    dateStr, gold, silver, rate,
+    ratio,
+    goldBase.toFixed(4), silverBasePerKg.toFixed(2),
+    silverbar || '', premiumPct
+  ];
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.textContent = 'SAVING...';
+
+  try {
+    await fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify({ row }),
+      headers: { 'Content-Type': 'application/json' },
+      mode: 'no-cors'
+    });
+    showToast('✓ Google Sheets에 저장되었습니다', 'success');
+  } catch(err) {
+    showToast('저장 실패: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'SAVE TO GOOGLE SHEETS';
+  }
+}
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => { t.classList.remove('show'); }, 3000);
+}
+
+// Live update on input
+['goldPrice','silverPrice','exchangeRate','silverbarPrice','customPremium'].forEach(id => {
+  document.getElementById(id).addEventListener('input', update);
+});
+</script>
+</body>
+</html>
